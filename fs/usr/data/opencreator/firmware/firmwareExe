@@ -1,0 +1,172 @@
+#!/bin/sh
+# C5 firmwareExe replacement, meant to bootstrap the initial system and startup the main applications loop
+# Basically meant to do Wi-Fi and SoC coprocessor, then handoff to startup.sh @ /usr/data/opencreator/startup/startup.sh
+# This also makes it recoverable if startup's script breaks, as you'll still have Wi-Fi / SSH if you're not on a new
+# install. This is meant to run over a current install of 1.9.9 with Wi-Fi already made, so then well, you aren't
+# stuck if everything breaks.
+# Based on Tunneled Launcher for Tunneled OpenCreator
+
+# OpenCreator 2026 - Distributed under MIT - No warranty and support is optional
+
+LAUNCHER_LOG="/tmp/opencreator.log"
+log_launcher() {
+    echo "$1" >> "$LAUNCHER_LOG"
+}
+log_launcher "firmwareExe is starting..."
+
+MACHINE=$(sed -n 's/^[[:space:]]*MACHINE=\([A-Za-z0-9]*\).*/\1/p' \
+    /usr/prog/app_startup.sh /usr/prog/PROGRAM/runFirmwareExe.sh 2>/dev/null | head -n 1)
+
+log_launcher "FE: Enabling legacy NaN and mounting Entware..."
+sh /usr/data/opencreator/startup/scripts/01-fixnan.sh
+if [ ! -x /opt/bin/opkg ] && [ -d /usr/data/bin/opt ] && ! grep -q ' /opt ' /proc/mounts; then
+    mount --bind /usr/data/bin/opt /opt
+fi
+
+# C5 only: the AD5X has no SoC coprocessor
+if command -v cmd_mcu >/dev/null 2>&1 && [ -f /usr/prog/libmcu-bare.bin ]; then
+    log_launcher "FE: Starting SoC coprocessor..."
+    # Mirrors stock klipper/start.sh.
+    cmd_mcu write_firmware /usr/prog/libmcu-bare.bin
+    cmd_mcu bootup
+    sleep 2
+fi
+
+# The AD5X also supports ethernet, hotspot and manual addresses, configured
+# in FlashForge's JSON; this block is openad5x's proven network start.
+if [ "$MACHINE" = AD5X ]; then
+    CFG=/usr/prog/config/Adventurer5M.json
+    WIFI=/usr/prog/wifi
+    net_get() {
+    	sed -n '/"network"/,/}/s/.*"'"$1"'" *: *"\{0,1\}\([^",]*\).*/\1/p' "$CFG" | head -n 1
+    }
+
+    set_address() {
+    	if [ "$(net_get isManual)" = true ]; then
+    		ifconfig "$1" "$(net_get configIp)" netmask "$(net_get configNetmask)"
+    		gw=$(net_get configGateway)
+    		[ -n "$gw" ] && route add default gw "$gw"
+    		dns=$(net_get configDns)
+    		[ -n "$dns" ] && echo "nameserver $dns # $1" > /etc/resolv.conf
+    	else
+    		udhcpc -b -i "$1" -p /var/run/udhcpc.pid
+    	fi
+    }
+
+    start_hotspot() {
+    	ifconfig wlan0 down
+    	ifconfig wlan0 up
+    	sleep 1
+    	ifconfig wlan0 192.168.0.240
+    	mkdir -p /var/lib/misc/
+    	touch /var/lib/misc/udhcpd.leases
+    	udhcpd -I 192.168.0.240
+    	hostapd -B $WIFI/rtl_hostapd_2G.conf
+    }
+
+    start_wifi() {
+    	ip addr flush dev eth0
+    	ifconfig wlan0 down
+    	killall wpa_supplicant udhcpc 2>/dev/null
+    	ifconfig wlan0 up
+    	wpa_supplicant -d -Dnl80211 -iwlan0 -c$WIFI/wpa_supplicant.conf -B
+    	wpa_cli -i wlan0 enable_network all
+    	set_address wlan0
+    }
+
+    eth_carrier() { cat /sys/class/net/eth0/carrier 2>/dev/null; }
+
+    eth_watch() {
+    	last=$(eth_carrier)
+    	while true; do
+    		sleep 2
+    		now=$(eth_carrier)
+    		[ "$now" = "$last" ] && continue
+    		killall udhcpc 2>/dev/null
+    		ip addr flush dev eth0
+    		if [ "$now" = 1 ]; then
+    			log "eth0: cable plugged in"
+    			set_address eth0
+    		else
+    			log "eth0: cable pulled"
+    		fi
+    		last=$now
+    	done
+    }
+
+    start_ethernet() {
+    	ifconfig eth0 up
+    	sleep 1
+    	[ "$(eth_carrier)" = 1 ] && set_address eth0
+    	eth_watch &
+    }
+
+    network_start() {
+    	if [ "$(net_get wifiHotspotStatus)" = true ]; then
+    		log "network: hotspot"
+    		start_hotspot
+    	elif [ "$(net_get wifiStationStatus)" = true ]; then
+    		log "network: wifi"
+    		start_wifi
+    	elif [ "$(net_get ethernetStatus)" = true ]; then
+    		log "network: ethernet"
+    		start_ethernet
+    	else
+    		log "network: none enabled"
+    	fi
+    }
+
+    log_launcher "FE: Starting AD5X network..."
+    network_start
+    sleep 10
+else
+log_launcher "FE: Joining Wi-Fi Network..."
+# Stock firmwareExe joins the Wi-Fi networks saved from the touchscreen;
+# without it nothing associates wlan0 (dhcpcd from init only leases). The
+# Wi-Fi adapter is on the printer's USB bus: a USB reset re-creates wlan0
+# and strands wpa_supplicant/udhcpc, so check every 10 s and restart them
+# when wlan0 is new or they are gone.
+WPA_CONF=/usr/prog/wifi/wpa_supplicant.conf
+wifi_check() {
+    [ -e /sys/class/net/wlan0 ] || return
+    grep -q 'network=' "$WPA_CONF" 2>/dev/null || return
+    index=$(cat /sys/class/net/wlan0/ifindex 2>/dev/null)
+    if [ "$index" != "$wifi_index" ]; then
+        killall wpa_supplicant udhcpc >/dev/null 2>&1
+        sleep 1
+        wifi_index=$index
+    fi
+    pidof wpa_supplicant >/dev/null 2>&1 || \
+        wpa_supplicant -Dnl80211 -iwlan0 -c"$WPA_CONF" -B
+    pidof udhcpc >/dev/null 2>&1 || udhcpc -i wlan0 -b >/dev/null 2>&1
+}
+wifi_index=$(cat /sys/class/net/wlan0/ifindex 2>/dev/null)
+pidof wpa_supplicant >/dev/null 2>&1 || wifi_index=
+(
+    while true; do
+        wifi_check
+        sleep 10
+    done
+) &
+
+# Give the Wi-Fi association above a moment to actually happen instead of
+# moving on immediately.
+sleep 10
+fi
+
+# Check for tunneled.sh override after Wi-Fi setup
+TUNNELED_SCRIPT="/usr/data/opencreator/tunneled/tunneled.sh"
+if [ -x "$TUNNELED_SCRIPT" ]; then
+    log_launcher "FE: Launching Tunneled Script ($TUNNELED_SCRIPT)..."
+    exec "$TUNNELED_SCRIPT" >> "$LAUNCHER_LOG" 2>&1
+fi
+
+log_launcher "FE: Launching Startup Scripts..."
+/usr/data/opencreator/startup/startup.sh
+
+# startup.sh backgrounds every script and returns at once, so it must only
+# run once. app_startup.sh restores the stock binary unless a process named
+# firmwareExe is still running, so stay alive.
+while true; do
+    sleep 3600
+done
