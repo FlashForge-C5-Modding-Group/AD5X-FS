@@ -5,6 +5,7 @@
 SAMPLE_TIME  = 0.001
 SAMPLE_COUNT = 8
 REPORT_TIME  = 0.100
+ENDSTOP_POLL_TIME = 0.010
 
 class RunoutHelper:
     def __init__(self, config):
@@ -21,6 +22,53 @@ class RunoutHelper:
     def note_filament_present(self, state, force=False):
         self.filament_present = state
 
+# Software endstop for homing moves: triggers while the sensor reads filament
+class AD5XEndstop:
+    def __init__(self, sensor):
+        self._sensor = sensor
+        self._reactor = sensor.printer.get_reactor()
+        self._steppers = []
+        self._trigger_time = 0.
+        self._completion = None
+        self._poll_timer = None
+
+    def get_mcu(self):
+        return self._sensor.mcu_adc.get_mcu()
+
+    def add_stepper(self, stepper):
+        if stepper not in self._steppers:
+            self._steppers.append(stepper)
+
+    def get_steppers(self):
+        return list(self._steppers)
+
+    def home_start(self, print_time, sample_time, sample_count, rest_time, triggered=True):
+        self._triggered = triggered
+        self._trigger_time = 0.
+        self._completion = self._reactor.completion()
+        if self._sensor.state is not None and bool(self._sensor.state) == triggered:
+            self._trigger_time = self.get_mcu().estimated_print_time(self._reactor.monotonic())
+            self._completion.complete(True)
+        else:
+            self._poll_timer = self._reactor.register_timer(self._poll, self._reactor.NOW)
+        return self._completion
+
+    def _poll(self, eventtime):
+        if self._sensor.state is not None and bool(self._sensor.state) == self._triggered:
+            self._trigger_time = self.get_mcu().estimated_print_time(eventtime)
+            self._completion.complete(True)
+            return self._reactor.NEVER
+        return eventtime + ENDSTOP_POLL_TIME
+
+    def home_wait(self, home_end_time):
+        if self._poll_timer is not None:
+            self._reactor.unregister_timer(self._poll_timer)
+            self._poll_timer = None
+        return self._trigger_time
+
+    def query_endstop(self, print_time):
+        return 1 if self._sensor.state else 0
+
 class AD5XFilamentSensor:
     def __init__(self, config):
         self.printer = config.get_printer()
@@ -30,6 +78,7 @@ class AD5XFilamentSensor:
         self.runout_helper = RunoutHelper(config)
         self.value = 0.
         self.state = None
+        self.endstop = AD5XEndstop(self)
         pin = config.get("sensor_pin")
         ppins = self.printer.lookup_object("pins")
         ppins.allow_multi_use_pin(pin)
