@@ -146,7 +146,7 @@ class AFC_IFS(AFC_HTLF):
                                             desc="Turn the end of print unload on or off")
 
         ppins = self.printer.lookup_object("pins")
-        for idx, pin in enumerate(self.speed_pins):
+        for idx, pin in enumerate(self.speed_pins if self.odometer_enable else []):
             ppins.allow_multi_use_pin(pin)
             mcu_adc = ppins.setup_pin("adc", pin)
             mcu_adc.setup_adc_sample(SILK_SAMPLE_TIME, SILK_SAMPLE_COUNT)

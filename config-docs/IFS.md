@@ -35,7 +35,7 @@ Set in `AFC_Hardware-IFS.cfg`:
 | `home_pin` | `^!ifs:PB9` | Selector home sensor |
 | `slot_angle`, `cam_angle` | 90, 45 | Degrees per lane slot and cam offset |
 | `silk_pins` | `ifs:PC0, PC2, PB12, PB14` | Lane sensors |
-| `speed_pins` | `ifs:PC1, PC3, PB13, PB15` | Roller speed sensors |
+| `speed_pins` | `ifs:PC1, PC3, PB13, PB15` | Roller speed sensors, used only when `odometer_enable` is True |
 | `odometer_enable` | `False` | Pause when a roller stands still while extruding |
 | `end_unload` | `True` | Unload at the end of a print |
 | `selector_movement_speed` | 70.43 | Selector speed in degrees per second |
