@@ -2,8 +2,7 @@
 Config and modules for the FlashForge AD5X running Kalico, with the IFS as an AFC unit. Documentation is in [openad5x](https://github.com/FlashForge-C5-Modding-Group/openad5x).
 
 ## Contents
-- `fs/usr/prog/openad5x/startup.sh` and `fs/usr/data/openad5x/startup.d/`: printer startup and its drop-in scripts (Entware, camera, Moonraker, nginx, GrumpyScreen)
-- `fs/usr/data/openad5x/firmware/firmwareExe`, `startup/`, `version.txt`: the boot (network, then the scripts in `startup/scripts/`, Klippy kept running by `10-klipper.sh`), and `klippy_restart.sh`
+- `fs/usr/data/openad5x/firmware/firmwareExe`, `startup/`, `version.txt`: the boot. `firmwareExe` brings the network up and runs `startup/startup.sh`, which starts every script in `startup/scripts/` (NaN byte, clock, Entware, toolhead board, Klippy, Moonraker, nginx, camera, GrumpyScreen). `10-klipper.sh` keeps Klippy running; `klippy_restart.sh` restarts it
 - `fs/usr/data/config/`: printer config (`printer.base.cfg`, `printer.cfg`, `ad5x_home.cfg`, `ad5x_print.cfg`, `loadcell.cfg`, `moonraker.conf`) and `AFC/` (`AFC.cfg`, `AFC_Hardware-IFS.cfg`, `AFC_Macro_Vars.cfg`, `ifs_macros.cfg`)
 - `fs/usr/data/openad5x/afc-ifs/`: `AFC_IFS.py` (the IFS unit for AFC) and `ad5x_filament_sensor.py`
 - `fs/usr/data/openad5x/mcu-flash/`: `ifs_capture.py`, `ifs_catch.py`, `ifs_flash.sh`, `ifs_probe.py`, flash the IFS MCU over its serial port
