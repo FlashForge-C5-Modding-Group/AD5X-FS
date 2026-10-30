@@ -2,8 +2,7 @@
 LAUNCHER_LOG="/tmp/openad5x.log"
 OC=/usr/data/openad5x/klipper
 KPY=$OC/klippy-env/bin/python
-# python-hf/cc/bin/gcc rebuilds c_helper.so (hard-float) after Kalico updates.
-export PATH=/usr/data/python-hf/cc/bin:$PATH:/opt/bin
+export PATH=$PATH:/opt/bin
 
 log_launcher() {
     echo "$1" >> "$LAUNCHER_LOG"

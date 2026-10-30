@@ -8,5 +8,6 @@ Config and modules for the FlashForge AD5X running Kalico, with the IFS as an AF
 - `fs/usr/data/openad5x/mcu-flash/`: `ad5x-mcu-flash` (flashes the mainboard and IFS live from a folder of `mcu-firmware/ad5x` images, and stages the eboard for the next power cycle), and `ifs_capture.py`, `ifs_catch.py`, `ifs_flash.sh`, `ifs_probe.py`, which flash the IFS MCU over its serial port
 - `fs/usr/data/openad5x/loadcell/loadcell.sh`: bed load cell commands used by `loadcell.cfg`
 - `mcu-firmware/ad5x/`: AD5X MCU firmware images with `SHA256SUMS`, and the Kalico build configs in `config/`
-- `build/`: scripts that build the Fluidd and Moonraker packages
+- `build/python/`: scripts that build the AD5X Python package (Python, the packages Kalico and Moonraker need, Moonraker, and `c_helper.so`), with a README
+- `build/moonraker`, `build/fluidd`: the older Moonraker and Fluidd packages
 - `config-docs/`: feature docs for the AFC and IFS config (`IFS.md`)

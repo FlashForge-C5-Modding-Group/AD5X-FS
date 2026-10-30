@@ -1,29 +1,14 @@
 #!/bin/sh
-# Moonraker (Arksine) in /usr/prog/moonraker on the hard-float Python, data folder = the Klipper folder
-LAUNCHER_LOG="/tmp/openad5x.log"
+# Moonraker (Arksine) on the AD5X Python, data folder = the Klipper folder
+PYDIR=/usr/data/openad5x/python
+MR_DIR=/usr/data/openad5x/moonraker
 OC=/usr/data/openad5x/klipper
-MOONRAKER=/usr/prog/moonraker/moonraker
-MPY=/usr/prog/moonraker/moonraker-env/bin/python
-export PATH=$PATH:/opt/bin
 
-# HOME is the read-only / at boot
-if [ -z "${HOME:-}" ] || [ "$HOME" = / ]; then
-    export HOME=/usr/data/openad5x/home
-    mkdir -p "$HOME"
-fi
+[ -f $MR_DIR/moonraker/moonraker.py ] || { echo "not installed"; exit 0; }
 
-log_launcher() {
-    echo "$1" >> "$LAUNCHER_LOG"
-}
-
-mkdir -p "$OC/tmp"
-
-while true; do
-    if [ -x "$MPY" ]; then
-        log_launcher "Launching Moonraker..."
-        rm -rf "$OC/tmp"/*
-        TMPDIR="$OC/tmp" "$MPY" "$MOONRAKER/moonraker/moonraker.py" -d "$OC"
-        log_launcher "Moonraker exited; restarting in 3 s."
-    fi
-    sleep 3
-done
+# libnacl loads libsodium from the Python's lib folder
+LD_LIBRARY_PATH=$PYDIR/lib \
+SSL_CERT_FILE=$PYDIR/lib/python3.14/site-packages/certifi/cacert.pem \
+$PYDIR/bin/python3.14 $MR_DIR/moonraker/moonraker.py -d $OC \
+	> /usr/data/logs/moonraker.out 2>&1 &
+echo "started"
