@@ -1,0 +1,127 @@
+#!/bin/sh
+# Live MCU firmware update on the SoC, without a USB stick.
+# Usage: ad5x-mcu-flash DIR
+# DIR holds any of AD5X-mainboard.bin AD5X-ifs.hex AD5X-eboard.hex (mcu-firmware/ad5x).
+# The mainboard and the IFS flash live. The eboard bootloader only listens after a power-on,
+# before anything sends it 'A', so its hex is staged in /usr/data/kalico-fw/eboard.flash and
+# flashed by 08-mcu-wake.sh at the next power cycle.
+
+DIR=${1:-}
+LOG=/usr/data/logs/mcu-flash.log
+MR=http://127.0.0.1:7125
+WORK=/tmp/ad5x-mcu-flash
+HERE=$(dirname "$(readlink -f "$0")")
+FW_DIR=/usr/data/kalico-fw
+PY=/usr/data/python-hf/bin/python3.13
+
+die() { echo "ad5x-mcu-flash: $*" >&2; exit 1; }
+say() { echo "$*"; echo "$(date '+%F %T') $*" >> "$LOG"; }
+
+[ -n "$DIR" ] && [ -d "$DIR" ] || die "usage: ad5x-mcu-flash DIR"
+DIR=$(cd "$DIR" && pwd)
+CONTROL=$(ls -d /usr/prog/PROGRAM/control/[0-9]* 2>/dev/null | sort | tail -n 1)
+NATIONS=$CONTROL/NationsCommand
+IFSCMD=$CONTROL/IFSCommand
+[ -f "$DIR/AD5X-mainboard.bin" ] || [ -f "$DIR/AD5X-ifs.hex" ] || [ -f "$DIR/AD5X-eboard.hex" ] ||
+    die "no AD5X firmware files in $DIR"
+mkdir -p "$(dirname "$LOG")"
+
+state=$(curl -s -m 5 "$MR/printer/objects/query?print_stats=state" |
+        sed -n 's/.*"state": *"\([a-z]*\)".*/\1/p')
+case "$state" in
+    printing|paused) die "printer is $state" ;;
+esac
+
+# Klippy has an 'mcu ifs' only once the IFS runs Kalico; asked before Klippy is paused
+kalico_ifs=$(curl -s -m 5 "$MR/printer/objects/query?mcu%20ifs=mcu_version" 2>/dev/null | grep -c mcu_version)
+
+pids_of() {
+    for d in /proc/[0-9]*; do
+        { tr '\0' ' ' < "$d/cmdline"; } 2>/dev/null | grep -q "$1" &&
+            echo "${d#/proc/}"
+    done
+}
+
+WAKE=$(pids_of '08-mcu-wake')
+KLIPPY=
+# Klippy is stopped for the flash and killed afterwards, so the loop in 10-klipper.sh starts a fresh one
+resume() {
+    [ -n "$KLIPPY" ] && kill -KILL $KLIPPY 2>/dev/null
+    [ -n "$WAKE" ] && kill -CONT $WAKE 2>/dev/null
+}
+trap resume EXIT INT TERM HUP
+
+say "flashing from $DIR"
+[ -n "$WAKE" ] && kill -STOP $WAKE
+KLIPPY=$(pids_of 'klippy/klippy\.py')
+[ -n "$KLIPPY" ] && kill -STOP $KLIPPY
+
+rm -rf "$WORK"; mkdir -p "$WORK"; cd "$WORK" || die "no $WORK"
+failed=
+
+if [ -f "$DIR/AD5X-mainboard.bin" ]; then
+    [ -x "$NATIONS" ] || die "no NationsCommand in $CONTROL"
+    saved=$(stty -g -F /dev/ttyS2)
+    # ROM bootloader on ttyS2; NationsCommand pulses BOOT0 and RESET itself
+    (cd "$CONTROL" && ./NationsCommand -c -d --fn "$DIR/AD5X-mainboard.bin" --v -r) \
+        > "$WORK/mainboard.log" 2>&1
+    stty -F /dev/ttyS2 "$saved"
+    cat "$WORK/mainboard.log" >> "$LOG"
+    if grep -q "verification succeeded" "$WORK/mainboard.log"; then
+        say "mainboard: flashed"
+    else
+        say "mainboard: FAILED"; failed=1
+    fi
+fi
+
+if [ -f "$DIR/AD5X-ifs.hex" ]; then
+    [ -x "$IFSCMD" ] || die "no IFSCommand in $CONTROL"
+    [ "$kalico_ifs" -eq 0 ] || [ -x "$PY" ] || die "no $PY"
+    saved=$(stty -g -F /dev/ttyS4)
+    ok=
+    if [ "$kalico_ifs" -eq 0 ]; then
+        # FlashForge's firmware, as its control run.sh does: ifsF37 drops the app to the bootloader, IFSCommand uploads
+        F37=$(ls /usr/prog/PROGRAM/control/*/ifsF37 /usr/prog/PROGRAM/control/ifsF37 2>/dev/null | tail -n 1)
+        [ -n "$F37" ] || die "no ifsF37 in $CONTROL"
+        if "$F37" /dev/ttyS4 > "$WORK/ifs.log" 2>&1 &&
+            "$IFSCMD" "$DIR/AD5X-ifs.hex" /dev/ttyS4 >> "$WORK/ifs.log" 2>&1; then
+            ok=1
+        fi
+    # IFSCommand generates the XMODEM frames; a Kalico IFS drops to its bootloader on the request string
+    elif "$PY" "$HERE/ifs_capture.py" "$IFSCMD" "$DIR/AD5X-ifs.hex" "$WORK/ifs.frames" \
+            > "$WORK/ifs.log" 2>&1 &&
+        "$PY" -c "
+import os,termios
+fd=os.open('/dev/ttyS4',os.O_RDWR|os.O_NOCTTY)
+a=termios.tcgetattr(fd); a[0]=0;a[1]=0;a[2]=termios.CS8|termios.CREAD|termios.CLOCAL;a[3]=0;a[4]=a[5]=termios.B115200
+termios.tcsetattr(fd,termios.TCSANOW,a)
+os.write(fd,b'~ \x1c Request Serial Bootloader!! ~'); termios.tcdrain(fd)
+" >> "$WORK/ifs.log" 2>&1 &&
+        "$PY" "$HERE/ifs_catch.py" /dev/ttyS4 "$WORK/ifs.frames" 20 \
+            >> "$WORK/ifs.log" 2>&1; then
+        ok=1
+    fi
+    stty -F /dev/ttyS4 "$saved"
+    cat "$WORK/ifs.log" >> "$LOG"
+    if [ -n "$ok" ]; then say "ifs: flashed"; else say "ifs: FAILED"; failed=1; fi
+fi
+
+if [ -f "$DIR/AD5X-eboard.hex" ]; then
+    mkdir -p "$FW_DIR"
+    cp "$DIR/AD5X-eboard.hex" "$FW_DIR/AD5X-eboard.hex" || die "cannot stage the eboard hex in $FW_DIR"
+    echo "$FW_DIR/AD5X-eboard.hex" > "$FW_DIR/eboard.flash"
+    say "eboard: staged for the next POWER CYCLE (not a reboot command:"
+    say "eboard: the bootloader only waits after real power-on)"
+fi
+
+resume
+KLIPPY= WAKE=
+for i in $(seq 1 45); do
+    sleep 2
+    curl -s -m 5 "$MR/printer/info" | grep -q '"state": *"ready"' && break
+done
+curl -s -m 5 "$MR/printer/objects/query?mcu=mcu_version&mcu%20eboard=mcu_version&mcu%20ifs=mcu_version" |
+    grep -o '"mcu[^"]*": *{"mcu_version": *"[^"]*"' | sed 's/{"mcu_version": *//; s/"//g' |
+    while IFS= read -r line; do say "$line"; done
+[ -z "$failed" ] || die "some boards failed; see $LOG"
+say "done"

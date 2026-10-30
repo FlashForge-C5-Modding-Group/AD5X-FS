@@ -47,6 +47,16 @@ if [ "$MACHINE" = AD5X ]; then
     done
 fi
 
+# AFC's modules and ours are linked into Kalico's extras on every start, since a new Kalico checkout loses the links
+AFC=/usr/data/AFC-Klipper-Add-On
+EXTRAS=$OC/klipper/klippy/extras
+if [ -d "$EXTRAS" ]; then
+    for f in "$AFC"/extras/*.py /usr/data/openad5x/afc-ifs/*.py; do
+        [ -f "$f" ] || continue
+        [ "${f##*/}" = __init__.py ] || ln -sf "$f" "$EXTRAS/${f##*/}"
+    done
+fi
+
 PLUGINS=/usr/data/openad5x/plugin-manager/oc-plugin
 [ -d /opt/bin ] && [ -f "$PLUGINS" ] && ln -sf "$PLUGINS" /opt/bin/oc-plugin
 
