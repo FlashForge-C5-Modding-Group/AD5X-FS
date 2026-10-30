@@ -1,0 +1,5 @@
+#!/bin/sh
+[ -x /opt/bin/opkg ] || [ -d /usr/data/bin/opt ] || exit 0
+sh /usr/data/openad5x/startup/scripts/01-fixnan.sh || exit 1
+[ -x /opt/bin/opkg ] || grep -q ' /opt ' /proc/mounts || mount --bind /usr/data/bin/opt /opt
+[ -x /opt/etc/init.d/rc.unslung ] && /opt/etc/init.d/rc.unslung start

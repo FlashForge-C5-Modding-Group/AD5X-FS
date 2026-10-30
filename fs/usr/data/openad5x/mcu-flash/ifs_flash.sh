@@ -1,6 +1,6 @@
 # flash /usr/data/kalico-fw/ifs.hex into a running Kalico IFS on ttyS4
 set -e
-PY=/usr/data/kalico/klippy-env/bin/python
+PY=/usr/data/openad5x/klipper/klippy-env/bin/python
 cd /usr/data/kalico-fw
 md5sum ifs.hex
 $PY ifs_capture.py /usr/prog/PROGRAM/control/1.1.1/IFSCommand ifs.hex ifs.frames

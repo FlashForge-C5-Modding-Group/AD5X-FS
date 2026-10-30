@@ -24,7 +24,7 @@ Behaviour follows the stock firmware, decoded from `firmwareExe` (see the OpenAD
 
 ## The end of print unload switch
 
-The web UI's filament sensors list has an entry named `end_unload`. Its on/off switch turns the unload at the end of a print on or off. The setting is saved in `/usr/data/config/kalico/AFC/ifs_options.json`, and the default comes from the `end_unload` option. `ADX_END_UNLOAD_SET ENABLE=0|1` does the same from a console, and with no value it shows the current state.
+The web UI's filament sensors list has an entry named `end_unload`. Its on/off switch turns the unload at the end of a print on or off. The setting is saved in `/usr/data/openad5x/klipper/config/AFC/ifs_options.json`, and the default comes from the `end_unload` option. `ADX_END_UNLOAD_SET ENABLE=0|1` does the same from a console, and with no value it shows the current state.
 
 ## Options of `[AFC_IFS IFS_1]`
 
@@ -57,8 +57,8 @@ Read by the code with these defaults when not set:
 | `cut_approach_y` | 10 | Y of the approach to the cutter |
 | `rehome_on_select` | `True` | Re-home the selector when a different lane is selected |
 | `tool_sensor` | `fill_sensor` | Toolhead sensor |
-| `silk_file` | `/usr/data/config/kalico/AFC/ifs_silk.json` | Saved silk calibration |
-| `options_file` | `/usr/data/config/kalico/AFC/ifs_options.json` | Saved switch setting |
+| `silk_file` | `/usr/data/openad5x/klipper/config/AFC/ifs_silk.json` | Saved silk calibration |
+| `options_file` | `/usr/data/openad5x/klipper/config/AFC/ifs_options.json` | Saved switch setting |
 
 ## Commands
 

@@ -2,7 +2,7 @@
 # Probe ttyS4: passive listen, bootloader sync, Kalico identify at a few bauds
 # usage: ifs_probe.py <port>
 import os, sys, termios, time
-sys.path.insert(0, '/usr/data/kalico/klipper/klippy')
+sys.path.insert(0, '/usr/data/openad5x/klipper/klipper/klippy')
 import msgproto
 
 port = sys.argv[1]

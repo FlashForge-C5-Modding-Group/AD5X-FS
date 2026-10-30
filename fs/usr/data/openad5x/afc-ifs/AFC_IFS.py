@@ -88,7 +88,7 @@ class AFC_IFS(AFC_HTLF):
         self.silk_cal           = [{} for _ in self.silk_pins]
         # Fluidd looks the unit up as AFC_<type> <name> from the type in AFC's unit list
         self.printer.add_object("AFC_{} {}".format(self.type, self.name), self)
-        self.silk_file          = config.get("silk_file", "/usr/data/config/kalico/AFC/ifs_silk.json")
+        self.silk_file          = config.get("silk_file", "/usr/data/openad5x/klipper/config/AFC/ifs_silk.json")
         self._silk_load()
         self.speed_pins         = [p.strip() for p in config.get("speed_pins", "").split(",") if p.strip()]
         self.odo                = [_Odometer() for _ in self.speed_pins]
@@ -99,7 +99,7 @@ class AFC_IFS(AFC_HTLF):
         self.odo_last_e         = 0.
         self.auto_load          = config.getboolean("auto_load", True)
         self.end_unload         = config.getboolean("end_unload", True)
-        self.options_file       = config.get("options_file", "/usr/data/config/kalico/AFC/ifs_options.json")
+        self.options_file       = config.get("options_file", "/usr/data/openad5x/klipper/config/AFC/ifs_options.json")
         self._options_load()
         self.auto_load_max     = config.getfloat("auto_load_max", 650.)
         self.park_dist          = config.getfloat("park_dist", 100.)

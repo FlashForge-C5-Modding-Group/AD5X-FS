@@ -6,7 +6,7 @@ Kalico firmware images for the three AD5X boards, built from `kalico-ad5x`:
 |---|---|---|
 | `AD5X-mainboard.bin` | Mainboard (`/dev/ttyS2`) | `NationsCommand` (the chip's ROM bootloader) |
 | `AD5X-eboard.hex` | Toolhead board (`/dev/ttyS5`) | `IAPCommand`, or the one-time hook in `startup.sh` (`/usr/data/kalico-fw/eboard.flash` holds the path of the `.hex`) |
-| `AD5X-ifs.hex` | IFS (`/dev/ttyS4`) | `fs/usr/data/opencreator/mcu-flash/ifs_flash.sh` |
+| `AD5X-ifs.hex` | IFS (`/dev/ttyS4`) | `fs/usr/data/openad5x/mcu-flash/ifs_flash.sh` |
 
 `config/` has the Kalico build config for each board. `VERSION` is the `kalico-ad5x` commit the images were built from, which is also what the boards report as their version.
 
