@@ -111,6 +111,9 @@ if [ "$MACHINE" = AD5X ]; then
     	elif [ "$(net_get ethernetStatus)" = true ]; then
     		log_launcher "network: ethernet"
     		start_ethernet
+    	elif grep -q 'network=' $WIFI/wpa_supplicant.conf 2>/dev/null; then
+    		log_launcher "network: wifi (saved network, no mode set)"
+    		start_wifi
     	else
     		log_launcher "network: none enabled"
     	fi
