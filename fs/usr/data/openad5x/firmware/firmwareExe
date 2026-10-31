@@ -117,6 +117,11 @@ if [ "$MACHINE" = AD5X ]; then
     	else
     		log_launcher "network: none enabled"
     	fi
+    	# GrumpyScreen's Network tab needs wpa_supplicant's control socket, also on ethernet or with no mode
+    	if [ "$(net_get wifiHotspotStatus)" != true ] && ! pidof wpa_supplicant >/dev/null 2>&1; then
+    		ifconfig wlan0 up
+    		wpa_supplicant -Dnl80211 -iwlan0 -c$WIFI/wpa_supplicant.conf -B
+    	fi
     }
 
     log_launcher "FE: Starting AD5X network..."

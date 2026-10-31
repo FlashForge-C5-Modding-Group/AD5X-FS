@@ -12,7 +12,7 @@ MR=http://127.0.0.1:7125
 WORK=/tmp/ad5x-mcu-flash
 HERE=$(dirname "$(readlink -f "$0")")
 FW_DIR=/usr/data/kalico-fw
-PY=/usr/data/openad5x/python/bin/python3.14
+PY=/usr/data/python-hf/bin/python3.13
 
 die() { echo "ad5x-mcu-flash: $*" >&2; exit 1; }
 say() { echo "$*"; echo "$(date '+%F %T') $*" >> "$LOG"; }

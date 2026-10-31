@@ -11,6 +11,9 @@ if [ -d /usr/data/AFC-Klipper-Add-On ] && grep -q '^backend: none' $GS_DIR/grump
 	echo "mmu backend: afc"
 fi
 
+# the Wi-Fi panel restarts Wi-Fi with this after joining a network
+sed -i 's|^restart_wifi_cmd:.*|restart_wifi_cmd: /bin/sh /usr/data/openad5x/restart_wifi.sh|' $GS_DIR/grumpyscreen.cfg
+
 # right way up on the AD5X (rotation 0)
 DISPLAY_ROTATE=0 $GS_DIR/start.sh > /usr/data/logs/grumpyscreen.log 2>&1 &
 echo "started"
