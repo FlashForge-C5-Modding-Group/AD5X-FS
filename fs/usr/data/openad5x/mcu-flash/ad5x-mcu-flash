@@ -6,6 +6,7 @@
 # before anything sends it 'A', so its hex is staged in /usr/data/kalico-fw/eboard.flash and
 # flashed by 08-mcu-wake.sh at the next power cycle.
 
+export PATH=$PATH:/opt/bin
 DIR=${1:-}
 LOG=/usr/data/logs/mcu-flash.log
 MR=http://127.0.0.1:7125
@@ -70,40 +71,44 @@ if [ -f "$DIR/AD5X-mainboard.bin" ]; then
     if grep -q "verification succeeded" "$WORK/mainboard.log"; then
         say "mainboard: flashed"
     else
-        say "mainboard: FAILED"; failed=1
+        say "mainboard: FAILED"; tail -n 15 "$WORK/mainboard.log"; failed=1
     fi
 fi
 
 if [ -f "$DIR/AD5X-ifs.hex" ]; then
     [ -x "$IFSCMD" ] || die "no IFSCommand in $CONTROL"
-    [ "$kalico_ifs" -eq 0 ] || [ -x "$PY" ] || die "no $PY"
     saved=$(stty -g -F /dev/ttyS4)
     ok=
-    if [ "$kalico_ifs" -eq 0 ]; then
-        # FlashForge's firmware, as its control run.sh does: ifsF37 drops the app to the bootloader, IFSCommand uploads
+    # FlashForge's firmware, as its control run.sh does: ifsF37 drops the app to the bootloader, IFSCommand uploads
+    ifs_stock() {
         F37=$(ls /usr/prog/PROGRAM/control/*/ifsF37 /usr/prog/PROGRAM/control/ifsF37 2>/dev/null | tail -n 1)
-        [ -n "$F37" ] || die "no ifsF37 in $CONTROL"
-        if "$F37" /dev/ttyS4 > "$WORK/ifs.log" 2>&1 &&
-            "$IFSCMD" "$DIR/AD5X-ifs.hex" /dev/ttyS4 >> "$WORK/ifs.log" 2>&1; then
-            ok=1
-        fi
+        [ -n "$F37" ] || { echo "no ifsF37 in $CONTROL"; return 1; }
+        "$F37" /dev/ttyS4 && "$IFSCMD" "$DIR/AD5X-ifs.hex" /dev/ttyS4
+    }
     # IFSCommand generates the XMODEM frames; a Kalico IFS drops to its bootloader on the request string
-    elif "$PY" "$HERE/ifs_capture.py" "$IFSCMD" "$DIR/AD5X-ifs.hex" "$WORK/ifs.frames" \
-            > "$WORK/ifs.log" 2>&1 &&
+    ifs_kalico() {
+        [ -x "$PY" ] || { echo "no $PY"; return 1; }
+        "$PY" "$HERE/ifs_capture.py" "$IFSCMD" "$DIR/AD5X-ifs.hex" "$WORK/ifs.frames" &&
         "$PY" -c "
 import os,termios
 fd=os.open('/dev/ttyS4',os.O_RDWR|os.O_NOCTTY)
 a=termios.tcgetattr(fd); a[0]=0;a[1]=0;a[2]=termios.CS8|termios.CREAD|termios.CLOCAL;a[3]=0;a[4]=a[5]=termios.B115200
 termios.tcsetattr(fd,termios.TCSANOW,a)
 os.write(fd,b'~ \x1c Request Serial Bootloader!! ~'); termios.tcdrain(fd)
-" >> "$WORK/ifs.log" 2>&1 &&
-        "$PY" "$HERE/ifs_catch.py" /dev/ttyS4 "$WORK/ifs.frames" 20 \
-            >> "$WORK/ifs.log" 2>&1; then
+" &&
+        "$PY" "$HERE/ifs_catch.py" /dev/ttyS4 "$WORK/ifs.frames" 20
+    }
+    # Moonraker may not be up while the installer runs, so the IFS's firmware can't always be told from it: the other way is tried if the first fails
+    if [ "$kalico_ifs" -eq 0 ]; then first=ifs_stock second=ifs_kalico; else first=ifs_kalico second=ifs_stock; fi
+    if $first > "$WORK/ifs.log" 2>&1; then
         ok=1
+    else
+        echo "--- $first failed, trying $second" >> "$WORK/ifs.log"
+        $second >> "$WORK/ifs.log" 2>&1 && ok=1
     fi
     stty -F /dev/ttyS4 "$saved"
     cat "$WORK/ifs.log" >> "$LOG"
-    if [ -n "$ok" ]; then say "ifs: flashed"; else say "ifs: FAILED"; failed=1; fi
+    if [ -n "$ok" ]; then say "ifs: flashed"; else say "ifs: FAILED"; tail -n 15 "$WORK/ifs.log"; failed=1; fi
 fi
 
 if [ -f "$DIR/AD5X-eboard.hex" ]; then

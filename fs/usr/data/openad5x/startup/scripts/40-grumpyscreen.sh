@@ -24,8 +24,6 @@ if [ -d "$CONFIG_DIR" ]; then
         if [ -d /usr/data/AFC-Klipper-Add-On ] && grep -q '^backend: none' "$CONFIG"; then
             sed -i '/^\[mmu\]/,/^\[/ s/^backend: none/backend: afc/' "$CONFIG"
         fi
-        # the Wi-Fi panel restarts Wi-Fi with this after joining a network
-        sed -i 's|^restart_wifi_cmd:.*|restart_wifi_cmd: /bin/sh /usr/data/openad5x/restart_wifi.sh|' "$CONFIG"
     fi
 fi
 
