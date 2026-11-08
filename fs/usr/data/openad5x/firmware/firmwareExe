@@ -121,6 +121,8 @@ if [ "$MACHINE" = AD5X ]; then
     	if [ "$(net_get wifiHotspotStatus)" != true ] && ! pidof wpa_supplicant >/dev/null 2>&1; then
     		ifconfig wlan0 up
     		wpa_supplicant -Dnl80211 -iwlan0 -c$WIFI/wpa_supplicant.conf -B
+    		# no cable: the saved Wi-Fi network needs an address too
+    		[ "$(eth_carrier)" = 1 ] || udhcpc -b -i wlan0 -p /var/run/udhcpc-wlan0.pid
     	fi
     }
 
