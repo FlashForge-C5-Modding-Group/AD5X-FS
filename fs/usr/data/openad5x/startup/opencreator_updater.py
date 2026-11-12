@@ -36,7 +36,7 @@ SOC_CLONE = OCDIR / "ad5x-fs"
 SOC_KLIPPER = OCDIR / "klipper" / "klipper"
 FS_GIT_URL = "https://github.com/FlashForge-C5-Modding-Group/AD5X-FS.git"
 LOOPSCRIPT_PARTS = ("startup", "firmware", "moonraker", "fluidd", "plugin-manager", "mcu-flash",
-                    "loadcell", "afc-ifs", "nginx")
+                    "loadcell", "nginx")
 NGINX_CONF_D = Path("/usr/data/nginx/conf.d")
 FIRMWARE_EXE = Path("/usr/prog/PROGRAM/software/firmwareExe")
 STOCK_STARTUP = (Path("/usr/prog/app_startup.sh"), Path("/usr/prog/PROGRAM/runFirmwareExe.sh"))

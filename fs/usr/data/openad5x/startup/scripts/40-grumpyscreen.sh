@@ -31,8 +31,8 @@ if [ -d "$CONFIG_DIR" ]; then
     [ -f "$CONFIG" ] || cp "${GRUMPY}.cfg" "$CONFIG" 2>/dev/null
     if [ -f "$CONFIG" ]; then
         export CONFIG_FILE="$CONFIG"
-        # AFC installed: MMU panel on, unless another backend was chosen
-        if [ -d /usr/data/AFC-Klipper-Add-On ] && grep -q '^backend: none' "$CONFIG"; then
+        # AFC in the config: MMU panel on, unless another backend was chosen
+        if grep -q '^\[include AFC/' "$CONFIG_DIR/printer.cfg" 2>/dev/null && grep -q '^backend: none' "$CONFIG"; then
             sed -i '/^\[mmu\]/,/^\[/ s/^backend: none/backend: afc/' "$CONFIG"
         fi
     fi
