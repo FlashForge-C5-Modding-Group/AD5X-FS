@@ -14,6 +14,9 @@ log_launcher() {
 }
 log_launcher "firmwareExe is starting..."
 
+# stock app_startup.sh preloads tslib for its Qt screen; the hard-float programs started from here cannot load it
+unset LD_PRELOAD
+
 MACHINE=$(sed -n 's/^[[:space:]]*MACHINE=\([A-Za-z0-9]*\).*/\1/p' \
     /usr/prog/app_startup.sh /usr/prog/PROGRAM/runFirmwareExe.sh 2>/dev/null | head -n 1)
 
