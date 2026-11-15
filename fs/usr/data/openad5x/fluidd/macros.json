@@ -1,1 +1,277 @@
-{"expanded":[1,2],"categories":[{"id":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001","name":"Calibrations"},{"id":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002","name":"Load cell"}],"stored":[{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001","name":"CALIBRATE_INPUT_SHAPER_GRAPH"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001","name":"BED_MESH_CALIBRATE"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001","name":"PROBE_CALIBRATE"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001","name":"PROBE_ACCURACY"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002","name":"LOAD_CELL_TARE"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002","name":"LOAD_CELL_READ"},{"alias":"","visible":true,"disabledWhilePrinting":true,"color":"","categoryId":"6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002","name":"LOAD_CELL_DIAGNOSTIC"}]}
+{
+  "expanded": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "categories": [
+    {
+      "id": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "Print"
+    },
+    {
+      "id": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002",
+      "name": "Calibration"
+    },
+    {
+      "id": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0003",
+      "name": "Load cell"
+    },
+    {
+      "id": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS"
+    }
+  ],
+  "stored": [
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "PAUSE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "RESUME"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "CANCEL_PRINT"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "SET_PAUSE_NEXT_LAYER"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0001",
+      "name": "SET_PAUSE_AT_LAYER"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002",
+      "name": "BED_MESH_CALIBRATE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002",
+      "name": "PROBE_CALIBRATE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002",
+      "name": "PROBE_ACCURACY"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0003",
+      "name": "LOAD_CELL_TARE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0003",
+      "name": "LOAD_CELL_READ"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0003",
+      "name": "LOAD_CELL_DIAGNOSTIC"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_LOAD"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_UNLOAD_TOOL"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_CHANGE_TOOL"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_SELECT_LANE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_RELEASE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_FEED"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_RETRACT"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_SET_LOADED"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_UNSET_LOADED"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_RECOVER_LANE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_SILK_STATUS"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_SILK_CALIBRATE"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0004",
+      "name": "IFS_SILK_RESET"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "START_PRINT"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "END_PRINT"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "G28"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "PROBE"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "M900"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "M106"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "M107"
+    },
+    {
+      "alias": "",
+      "visible": false,
+      "disabledWhilePrinting": false,
+      "color": "",
+      "name": "SET_PRINT_STATS_INFO"
+    }
+  ]
+}
