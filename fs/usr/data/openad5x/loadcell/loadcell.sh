@@ -1,6 +1,12 @@
 #!/bin/sh
 # AD5X bed load cell board (STC8G1K08A + HX711) on ttyS7, 9600 baud
 # usage: loadcell.sh tare | read | diag [count]
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 
 DEV=/dev/ttyS7
 OUT=/tmp/loadcell.out

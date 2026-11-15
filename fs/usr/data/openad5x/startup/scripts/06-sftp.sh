@@ -2,6 +2,12 @@
 # SFTP: dropbear runs /usr/libexec/sftp-server, which the read-only root can't hold.
 # A copy of dropbear pointing at Entware's sftp-server (a path of the same length) is
 # bind-mounted over it and the listener restarted.
+#
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+# Edited by sterling motuz <Sterling@dexabyte.ca> for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 LAUNCHER_LOG="/tmp/openad5x.log"
 SFTP=/opt/libexec/sftp-server
 STOCK=/usr/sbin/dropbear

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # Run IFSCommand against a pty acting as the IFS bootloader and save its frames
 # usage: ifs_capture.py <IFSCommand> <file.hex> <out.frames>
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 import os, pty, select, subprocess, sys, tty
 
 ifscmd, hexfile, out = sys.argv[1:4]

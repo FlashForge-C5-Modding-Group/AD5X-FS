@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # Wait for the IFS bootloader after power-up and send captured IFSCommand frames
 # usage: ifs_catch.py <port> <in.frames> <seconds>
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 import os, sys, termios, time
 
 port, framefile, secs = sys.argv[1], sys.argv[2], float(sys.argv[3])

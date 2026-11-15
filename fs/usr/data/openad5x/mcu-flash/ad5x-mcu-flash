@@ -5,6 +5,12 @@
 # The mainboard and the IFS flash live. The eboard bootloader only listens after a power-on,
 # before anything sends it 'A', so its hex is staged in /usr/data/kalico-fw/eboard.flash and
 # flashed by 08-mcu-wake.sh at the next power cycle.
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 
 export PATH=$PATH:/opt/bin
 DIR=${1:-}

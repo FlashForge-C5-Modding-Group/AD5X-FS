@@ -1,5 +1,11 @@
 #!/bin/sh
 # nginx from Entware: Fluidd on port 80, the API passed to Moonraker
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 LAUNCHER_LOG="/tmp/openad5x.log"
 NGINX=/opt/sbin/nginx
 CONF=/usr/data/openad5x/nginx/nginx.conf

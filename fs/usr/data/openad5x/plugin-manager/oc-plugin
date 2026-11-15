@@ -1,5 +1,11 @@
 #!/bin/sh
 # OpenCreator plugin manager: oc-plugin list | install URL | update [ID] | remove ID | enable ID | disable ID | sync
+#
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+# Edited by sterling motuz <Sterling@dexabyte.ca> for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 HERE=$(cd "$(dirname "$0")" && pwd)
 export PATH=$PATH:/opt/bin
 for py in /usr/data/python-hf/bin/python3 /usr/data/openad5x/klipper/klippy-env/bin/python python3; do

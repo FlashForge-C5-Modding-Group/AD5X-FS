@@ -7,6 +7,11 @@
 # poweroff run busybox's commands (Moonraker already runs as root, there is
 # no sudo), and services are restarted the way LoopScript runs them: klippy
 # is stopped and 10-klipper.sh starts it again; Moonraker restarts itself.
+#
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+#
+# This file may be distributed under the terms of the MIT license.
 from __future__ import annotations
 import asyncio
 import logging

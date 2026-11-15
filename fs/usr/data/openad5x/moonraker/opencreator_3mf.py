@@ -1,6 +1,9 @@
 # Accept sliced 3MF uploads (OrcaSlicer / Bambu Studio "gcode.3mf") in the
 # gcodes root by repacking them as UFP, which Moonraker already unpacks.
 #
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+#
 # This file is free software; you can redistribute it and/or modify it under
 # the terms of the GNU GPLv3 license.
 from __future__ import annotations

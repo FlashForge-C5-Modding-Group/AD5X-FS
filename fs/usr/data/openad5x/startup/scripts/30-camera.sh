@@ -1,6 +1,12 @@
 #!/bin/sh
 # Camera: FlashForge's own mjpg-streamer, same command as firmwareExe
 # (without output_file snapshots), port 8080
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 
 MJ_DIR=/usr/prog/mjpg-streamer
 
