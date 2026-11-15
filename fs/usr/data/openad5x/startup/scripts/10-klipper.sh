@@ -1,4 +1,9 @@
 #!/bin/sh
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+# Edited by sterling motuz <Sterling@dexabyte.ca> for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 LAUNCHER_LOG="/tmp/openad5x.log"
 OC=/usr/data/openad5x/klipper
 KPY=$OC/klippy-env/bin/python
@@ -17,34 +22,12 @@ for AFC_VARS in "$OC/config/AFC/AFC.var.unit" "$OC/config/AFC/AFC.var"; do
     fi
 done
 
-# printer.base.cfg gets the Pro-only hardware (chamber heater, chamber and aux
-# fans: printer.pro.cfg) through printer.model.cfg. The model is read from the
-# stock boot script, as the installer does.
-MODEL_CFG=$OC/config/printer.model.cfg
-MACHINE=$(sed -n 's/^[[:space:]]*MACHINE=\([A-Za-z0-9]*\).*/\1/p' \
-    /usr/prog/app_startup.sh /usr/prog/PROGRAM/runFirmwareExe.sh 2>/dev/null | head -n 1)
-case $MACHINE in
-    Creator5Pro) MODEL_TEXT='# Written at boot: Creator 5 Pro
-[include printer.pro.cfg]' ;;
-    Creator5) MODEL_TEXT='# Written at boot: Creator 5 (no chamber heater, chamber fans or aux fan)' ;;
-    AD5X) MODEL_TEXT='# Written at boot: AD5X' ;;
-    *) MODEL_TEXT= ;;
-esac
-if [ -n "$MODEL_TEXT" ]; then
-    [ "$(cat "$MODEL_CFG" 2>/dev/null)" = "$MODEL_TEXT" ] || printf '%s\n' "$MODEL_TEXT" > "$MODEL_CFG"
-elif [ ! -f "$MODEL_CFG" ]; then
-    log_launcher "Printer model unknown; keeping the Creator 5 Pro hardware in the config"
-    printf '# Written at boot: model unknown, assumed Creator 5 Pro\n[include printer.pro.cfg]\n' > "$MODEL_CFG"
-fi
-
-# AD5X: 08-mcu-wake.sh starts (and flashes) the eboard first
-if [ "$MACHINE" = AD5X ]; then
-    i=0
-    while [ ! -e /tmp/openad5x-eboard-ready ] && [ $i -lt 90 ]; do
-        sleep 1
-        i=$((i + 1))
-    done
-fi
+# 08-mcu-wake.sh starts (and flashes) the eboard first
+i=0
+while [ ! -e /tmp/openad5x-eboard-ready ] && [ $i -lt 90 ]; do
+    sleep 1
+    i=$((i + 1))
+done
 
 PLUGINS=/usr/data/openad5x/plugin-manager/oc-plugin
 [ -d /opt/bin ] && [ -f "$PLUGINS" ] && ln -sf "$PLUGINS" /opt/bin/oc-plugin

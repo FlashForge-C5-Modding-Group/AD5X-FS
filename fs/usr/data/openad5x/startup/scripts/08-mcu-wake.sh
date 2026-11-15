@@ -1,7 +1,12 @@
 #!/bin/sh
 # Releases MCU boards from their boot stage whenever Klipper can't reach one
-# (power-on, FIRMWARE_RESTART). Port of c5_bridge.py's wake from
-# opencreator-tunnel; see config-docs/CREATOR5_MCU_WAKE.md.
+# (power-on, FIRMWARE_RESTART).
+#
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+# Edited by sterling motuz <Sterling@dexabyte.ca> for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 
 LOG=/usr/data/logs/mcu-wake.log
 PRINTER_LOG=/usr/data/openad5x/klipper/logs/printer.log
@@ -20,23 +25,12 @@ log() {
 }
 
 # mcu name -> tty, Klipper baud, wake parity order
-MACHINE=$(sed -n 's/^[[:space:]]*MACHINE=\([A-Za-z0-9]*\).*/\1/p' \
-    /usr/prog/app_startup.sh /usr/prog/PROGRAM/runFirmwareExe.sh 2>/dev/null | head -n 1)
+# only the eboard has the Ready/A boot stage; ttyS2 is the mainboard
+# (boots straight into the app) and ttyS4 the IFS (RS485, its
+# bootloader speaks XMODEM, not Ready/A)
 board() {
-    if [ "$MACHINE" = AD5X ]; then
-        # only the eboard has the Ready/A boot stage; ttyS2 is the mainboard
-        # (boots straight into the app) and ttyS4 the IFS (RS485, its
-        # bootloader speaks XMODEM, not Ready/A)
-        case "$1" in
-            eboard) echo "/dev/ttyS5 230400 N E" ;;
-            *) return 1 ;;
-        esac
-        return 0
-    fi
     case "$1" in
-        eheaterboard|heaterboard) echo "/dev/ttyS4 230400 N E" ;;
-        eboard) echo "/dev/ttyS5 460800 E N" ;;
-        levelboard) echo "/dev/ttyS7 230400 N E" ;;
+        eboard) echo "/dev/ttyS5 230400 N E" ;;
         *) return 1 ;;
     esac
 }
@@ -137,7 +131,7 @@ wake() {
     log "$name: wake $result"
 }
 
-# AD5X: start the eboard application before Klippy connects, and flash it first when
+# Start the eboard application before Klippy connects, and flash it first when
 # /usr/data/kalico-fw/eboard.flash names a .hex. The bootloader only accepts IAPCommand while it
 # waits for the 'A' (0x41), and answers ACK (0x06). 10-klipper.sh waits for the marker.
 EBOARD=/dev/ttyS5
@@ -194,11 +188,9 @@ eboard_start() {
     return 1
 }
 
-if [ "$MACHINE" = AD5X ]; then
-    rm -f "$EBOARD_READY"
-    eboard_start
-    touch "$EBOARD_READY"
-fi
+rm -f "$EBOARD_READY"
+eboard_start
+touch "$EBOARD_READY"
 
 log "started"
 tail -n 0 -F "$PRINTER_LOG" 2>/dev/null | {

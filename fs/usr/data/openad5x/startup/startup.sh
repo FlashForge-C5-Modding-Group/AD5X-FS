@@ -1,6 +1,12 @@
 #!/bin/sh
 # A more advanced version of LoopScript from OpenCreator Legacy
 # Credits to https://github.com/FlashForge-C5-Modding-Group/Creator-5-Scripts/graphs/contributors
+#
+# Copyright (c) 2026 FlashForge Creator 5 Modding Group
+# From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
+# Edited by sterling motuz <Sterling@dexabyte.ca> for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 set -e
 set -u
 
@@ -14,13 +20,6 @@ log_launcher() {
 if [ ! -d "$TARGET_DIR" ]; then
     log_launcher "Error: Directory $TARGET_DIR does not exist."
     exit 1
-fi
-
-# MCU firmware the installer left for this power-on, before anything wakes the boards
-PENDING=/usr/data/openad5x/mcu-flash-pending/flash.sh
-if [ -f "$PENDING" ]; then
-    log_launcher "Flashing pending MCU firmware"
-    sh "$PENDING" > /tmp/mcu-flash-pending.log 2>&1 || true
 fi
 
 for script in $(ls "$TARGET_DIR"/*.sh 2>/dev/null | sort); do
