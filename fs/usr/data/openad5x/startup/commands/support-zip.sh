@@ -1,33 +1,37 @@
 #!/bin/sh
-# support.zip in the config folder: recent logs, configs and system details
-OC=/usr/data/openad5x/klipper
-PYTHON=$OC/klippy-env/bin/python
-WORK=$(mktemp -d /tmp/oc-support.XXXXXX) || exit 1
-trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/logs" "$WORK/config/AFC"
+# GrumpyScreen "support zip" button: logs, configs (secrets removed) and system details in config/support.zip
+#
+# Copyright (C) 2026  sterling motuz <Sterling@dexabyte.ca>
+#
+# Made for the OpenAD5X project
+#
+# This file may be distributed under the terms of the MIT license.
 
-for log in "$OC"/logs/printer.log "$OC"/logs/moonraker.log "$OC"/logs/AFC.log /tmp/*.log; do
-    [ -f "$log" ] && tail -c 2000000 "$log" > "$WORK/logs/${log##*/}"
+CFG=/usr/data/openad5x/klipper/config
+OUT=/tmp/openad5x-support
+rm -rf "$OUT"
+mkdir -p "$OUT/logs" "$OUT/config"
+
+# last 2 MB of every log: Klipper, AFC, Moonraker, screen, boot
+for f in /usr/data/openad5x/klipper/logs/*.log /usr/data/logs/*.log /tmp/*.log; do
+    [ -f "$f" ] && tail -c 2000000 "$f" > "$OUT/logs/${f##*/}"
 done
 
-for file in "$OC"/config/*.cfg "$OC"/config/moonraker.conf "$OC"/config/AFC/*.cfg; do
-    [ -f "$file" ] || continue
-    dest=$WORK/config/${file#"$OC"/config/}
-    # notifier URLs and the like carry tokens
-    sed -E 's/^([[:space:]]*[A-Za-z_]*(url|password|token|secret|key)[A-Za-z_]*[[:space:]]*[:=]).*/\1 <removed>/I' \
-        "$file" > "$dest"
+# configs with passwords, tokens, keys and URLs blanked
+cd "$CFG" || exit 1
+find . -name '*.cfg' -o -name '*.conf' | while read -r f; do
+    mkdir -p "$OUT/config/${f%/*}"
+    sed -E 's/^([[:space:]]*[A-Za-z_]*(password|token|secret|key|url)[A-Za-z_]*[[:space:]]*[:=]).*/\1 <removed>/I' "$f" > "$OUT/config/$f"
 done
 
 {
-    date
-    uname -a
+    date; uname -a
     cat /usr/data/openad5x/version.txt /usr/data/openad5x/install.json
-    git -C "$OC/klipper" log -1 --oneline
-    git -C /usr/data/openad5x/ad5x-fs log -1 --oneline
-    df -h /usr/data /tmp
-    free
-    ps w
-} > "$WORK/system.txt" 2>&1
+    /opt/bin/git -C /usr/data/openad5x/klipper/klipper log -1 --oneline
+    /opt/bin/git -C /usr/data/openad5x/ad5x-fs log -1 --oneline
+    df -h /usr/data /usr/prog /tmp; free; ps w
+} > "$OUT/system.txt" 2>&1
 
-cd "$WORK" || exit 1
-"$PYTHON" -c "import shutil; shutil.make_archive('$OC/config/support', 'zip', '.')"
+rm -f "$CFG/support.zip"
+cd "$OUT" && /usr/data/python-hf/bin/python3 -m zipfile -c "$CFG/support.zip" logs config system.txt
+rm -rf "$OUT"
