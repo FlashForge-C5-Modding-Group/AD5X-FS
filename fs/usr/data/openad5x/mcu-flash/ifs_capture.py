@@ -57,3 +57,5 @@ with open(out, 'wb') as f:
     for fr in frames:
         f.write(fr)
 print('frames', len(frames), 'eot', eot)
+if not frames or not eot:
+    sys.exit(1)

@@ -137,7 +137,7 @@ wake() {
 EBOARD=/dev/ttyS5
 EBOARD_FLASH=/usr/data/kalico-fw/eboard.flash
 EBOARD_READY=/tmp/openad5x-eboard-ready
-IAP=/usr/prog/PROGRAM/control/1.1.1/IAPCommand
+IAP=$(ls -d /usr/prog/PROGRAM/control/[0-9]* 2>/dev/null | sort | tail -n 1)/IAPCommand
 FLASH_LOGS=/usr/data/logs/openad5x
 
 eboard_start() {
@@ -145,6 +145,7 @@ eboard_start() {
     exec 3<>$EBOARD
     ack=$(printf '\006')
     tries=0
+    flashed=
     while [ $tries -lt 20 ]; do
         ready=
         i=0
@@ -159,14 +160,20 @@ eboard_start() {
             exec 3<&-
             return 0
         fi
-        if [ -f "$EBOARD_FLASH" ]; then
+        # one try per boot; the request stays until a flash succeeds
+        if [ -f "$EBOARD_FLASH" ] && [ -z "$flashed" ]; then
+            flashed=1
             hex=$(cat "$EBOARD_FLASH")
-            rm -f "$EBOARD_FLASH"
             exec 3<&-
             mkdir -p $FLASH_LOGS
             log "eboard: flashing $hex"
             $IAP "$hex" $EBOARD > $FLASH_LOGS/eboard-flash.log 2>&1
             log "eboard: IAPCommand exit $?"
+            if grep -q 'STM32Write: success' $FLASH_LOGS/eboard-flash.log; then
+                rm -f "$EBOARD_FLASH"
+            else
+                log "eboard: flash failed, tried again at the next power-on"
+            fi
             stty -F $EBOARD 115200 cs8 -parenb -cstopb -crtscts clocal raw -echo
             exec 3<>$EBOARD
             continue

@@ -12,6 +12,9 @@ import os, sys, termios, time
 port, framefile, secs = sys.argv[1], sys.argv[2], float(sys.argv[3])
 data = open(framefile, 'rb').read()
 frames = [data[i:i + 1030] for i in range(0, len(data), 1030)]
+if not frames:
+    print('no frames in', framefile)
+    sys.exit(1)
 
 fd = os.open(port, os.O_RDWR | os.O_NOCTTY)
 attr = termios.tcgetattr(fd)
@@ -67,4 +70,10 @@ for n, fr in enumerate(frames):
         print('frame %d failed' % n)
         sys.exit(2)
 os.write(fd, b'\x04')
-print('frames sent', len(frames), 'eot reply', read_byte(3.0), flush=True)
+reply = read_byte(3.0)
+if reply != 6:
+    os.write(fd, b'\x04')
+    reply = read_byte(3.0)
+print('frames sent', len(frames), 'eot reply', reply, flush=True)
+if reply != 6:
+    sys.exit(3)
