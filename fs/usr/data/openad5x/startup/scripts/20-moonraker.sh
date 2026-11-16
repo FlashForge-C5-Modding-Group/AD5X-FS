@@ -31,6 +31,12 @@ log_launcher() {
 for component in opencreator_3mf opencreator_machine; do
     ln -sf "/usr/data/openad5x/moonraker/$component.py" \
         "$MOONRAKER/moonraker/components/$component.py"
+    # keeps Moonraker's update manager from reporting it as an untracked file
+    if [ -d "$MOONRAKER/.git" ]; then
+        mkdir -p "$MOONRAKER/.git/info"
+        grep -qx "/moonraker/components/$component.py" "$MOONRAKER/.git/info/exclude" 2>/dev/null ||
+            echo "/moonraker/components/$component.py" >> "$MOONRAKER/.git/info/exclude"
+    fi
     grep -q "^\[$component\]" "$OC/config/moonraker.conf" ||
         printf '\n[%s]\n' "$component" >> "$OC/config/moonraker.conf"
 done

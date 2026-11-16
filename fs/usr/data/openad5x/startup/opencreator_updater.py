@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import os
@@ -51,6 +52,40 @@ def normalize(data: bytes) -> bytes:
     data = data.replace(b"\r", b"")
     m = SAVE_CONFIG.search(data)
     return data[:m.start()] if m else data
+
+
+def resolve_added_lines(diff3: bytes) -> bytes | None:
+    """Settle git merge-file --diff3 conflicts where the user's side is the base
+    lines with only lines of their own before or after them (an include the
+    installer added next to a changed line): their lines stay, the update's
+    lines replace the base. A block the update deletes goes, even if the user
+    edited it. None when any conflict is a real one."""
+    out, lines, i = [], diff3.split(b"\n"), 0
+    while i < len(lines):
+        if not lines[i].startswith(b"<<<<<<< "):
+            out.append(lines[i])
+            i += 1
+            continue
+        ours, base, theirs, part = [], [], [], "ours"
+        i += 1
+        while i < len(lines) and not lines[i].startswith(b">>>>>>> "):
+            if lines[i].startswith(b"||||||| "):
+                part = "base"
+            elif lines[i] == b"=======":
+                part = "theirs"
+            else:
+                {"ours": ours, "base": base, "theirs": theirs}[part].append(lines[i])
+            i += 1
+        i += 1
+        if not theirs:
+            continue                            # the update deletes a block the user edited: it goes
+        n = len(base)
+        spots = [k for k in range(len(ours) - n + 1) if ours[k:k + n] == base]
+        if len(spots) != 1:
+            return None
+        k = spots[0]
+        out.extend(ours[:k] + theirs + ours[k + n:])
+    return b"\n".join(out)
 
 
 def write_atomic(path: Path, data: bytes, mode: int | None = None):
@@ -158,9 +193,22 @@ class Updater:
                 return raw
         return None
 
+    def _closest(self, repo: Path, rel: str, want: bytes) -> bytes | None:
+        """The historical template most like the live file, to merge from when no
+        version matches it exactly (installer or startup additions, old edits)."""
+        best, best_ratio = None, 0.0
+        want_lines = want.splitlines()
+        for commit in self.git("log", "--diff-filter=AM", "--format=%H", "HEAD", "--", rel, cwd=repo).split():
+            raw = self.git("show", "%s:%s" % (commit.decode(), rel), cwd=repo)
+            ratio = difflib.SequenceMatcher(None, normalize(raw).splitlines(), want_lines, autojunk=False).ratio()
+            if ratio > best_ratio:
+                best, best_ratio = raw, ratio
+        return best
+
     def recover_base(self, name: str, live_n: bytes):
         """The template version the live file is an unedited copy of, from git
-        history: (0, raw) found, (1, None) no exact match, (2, None) no history."""
+        history: (0, raw) found, (3, raw) no exact match but the closest version,
+        (1, None) no version at all, (2, None) no history."""
         rel = "%s/%s" % (self.template_rel, name)
         try:
             if self._history is None:
@@ -171,14 +219,18 @@ class Updater:
             if found is not None:
                 return 0, found
             if complete:
-                return 1, None
+                closest = self._closest(repo, rel, live_n)
+                return (3, closest) if closest is not None else (1, None)
             # A shallow checkout's miss isn't conclusive: look in the full history.
             origin = self.git("remote", "get-url", "origin").decode().strip()
             full = Path(self._workdir()) / "history"
             self.git("clone", "-q", "--no-checkout", origin, str(full), cwd=self._workdir())
             self._history = (full, True)
             found = self._search(full, rel, live_n)
-            return (0, found) if found is not None else (1, None)
+            if found is not None:
+                return 0, found
+            closest = self._closest(full, rel, live_n)
+            return (3, closest) if closest is not None else (1, None)
         except (UpdateError, OSError) as e:
             self.log("%s: history lookup failed: %s" % (name, e))
             self._transient = True
@@ -189,14 +241,15 @@ class Updater:
             self._work = tempfile.mkdtemp(prefix="opencreator-updater.")
         return self._work
 
-    def merge3(self, live: bytes, base: bytes, latest: bytes):
+    def merge3(self, live: bytes, base: bytes, latest: bytes, diff3=False):
         """git merge-file: (status, merged). status 0 clean, >0 conflicts, <0 error."""
         d = Path(self._workdir())
         paths = [d / "current", d / "base", d / "latest"]
         for p, data in zip(paths, (live, base, latest)):
             p.write_bytes(data)
         env = dict(os.environ, PATH=os.environ.get("PATH", "") + ":/opt/bin")
-        r = subprocess.run(["git", "merge-file", "-p", "-L", "current", "-L", "base", "-L", "latest"]
+        r = subprocess.run(["git", "merge-file", "-p"] + (["--diff3"] if diff3 else [])
+                           + ["-L", "current", "-L", "base", "-L", "latest"]
                            + [str(p) for p in paths], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         if r.returncode < 0 or r.returncode > 127:
             return -1, r.stderr
@@ -236,7 +289,10 @@ class Updater:
                     if status == 0:
                         merge_base = recovered
                         self.log("%s: recovered historical baseline" % name)
-                    elif status == 1 and merge_base is not None:
+                    elif status == 3 and merge_base is None:
+                        merge_base = recovered
+                        self.log("%s: no exact baseline; merging from the closest historical version" % name)
+                    elif status in (1, 3) and merge_base is not None:
                         if merge_base == tmpl:
                             self.log("%s: unchanged template, preserving user edits" % name)
                             continue
@@ -253,6 +309,12 @@ class Updater:
                     self.publish(name, live, merged, base, tmpl)
                     conflict_file.unlink(missing_ok=True)
                     self.log("%s: merged" % name)
+                    changed = True
+                elif rc > 0 and (soft := resolve_added_lines(self.merge3(
+                        live_data.replace(b"\r", b""), normalize(merge_base), tmpl_n, diff3=True)[1])) is not None:
+                    self.publish(name, live, soft, base, tmpl)
+                    conflict_file.unlink(missing_ok=True)
+                    self.log("%s: merged, your added lines kept" % name)
                     changed = True
                 elif rc > 0:
                     # Never conflict markers in a file Klipper reads: the attempt goes beside it.
