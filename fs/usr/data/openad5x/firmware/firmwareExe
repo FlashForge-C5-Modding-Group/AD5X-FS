@@ -43,7 +43,7 @@ set_address() {
 		dns=$(net_get configDns)
 		[ -n "$dns" ] && echo "nameserver $dns # $1" > /etc/resolv.conf
 	else
-		udhcpc -b -i "$1" -p /var/run/udhcpc.pid
+		udhcpc -b -i "$1" -p /var/run/udhcpc-$1.pid
 	fi
 }
 
@@ -76,7 +76,10 @@ eth_watch() {
 		sleep 2
 		now=$(eth_carrier)
 		[ "$now" = "$last" ] && continue
-		killall udhcpc 2>/dev/null
+		# only eth0's DHCP client, Wi-Fi keeps its own
+		for pid in $(pidof udhcpc); do
+			tr '\0' ' ' < /proc/$pid/cmdline | grep -q eth0 && kill $pid
+		done
 		ip addr flush dev eth0
 		if [ "$now" = 1 ]; then
 			log_launcher "eth0: cable plugged in"
