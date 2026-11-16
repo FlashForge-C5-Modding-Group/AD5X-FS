@@ -20,6 +20,9 @@ WORK=/tmp/ad5x-mcu-flash
 HERE=$(dirname "$(readlink -f "$0")")
 FW_DIR=/usr/data/kalico-fw
 PY=/usr/data/python-hf/bin/python3.13
+# Entware's curl: FlashForge's, earlier in PATH, needs FlashForge's LD_LIBRARY_PATH
+CURL=/opt/bin/curl
+[ -x "$CURL" ] || CURL=curl
 
 die() { echo "ad5x-mcu-flash: $*" >&2; exit 1; }
 say() { echo "$*"; echo "$(date '+%F %T') $*" >> "$LOG"; }
@@ -32,15 +35,16 @@ IFSCMD=$CONTROL/IFSCommand
 [ -f "$DIR/AD5X-mainboard.bin" ] || [ -f "$DIR/AD5X-ifs.hex" ] || [ -f "$DIR/AD5X-eboard.hex" ] ||
     die "no AD5X firmware files in $DIR"
 mkdir -p "$(dirname "$LOG")"
+"$CURL" --version > /dev/null 2>&1 || die "curl does not run, so Moonraker can't be asked; not flashing"
 
-state=$(curl -s -m 5 "$MR/printer/objects/query?print_stats=state" |
+state=$("$CURL" -s -m 5 "$MR/printer/objects/query?print_stats=state" |
         sed -n 's/.*"state": *"\([a-z]*\)".*/\1/p')
 case "$state" in
     printing|paused) die "printer is $state" ;;
 esac
 
 # Klippy has an 'mcu ifs' only once the IFS runs Kalico; asked before Klippy is paused
-kalico_ifs=$(curl -s -m 5 "$MR/printer/objects/query?mcu%20ifs=mcu_version" 2>/dev/null | grep -c mcu_version)
+kalico_ifs=$("$CURL" -s -m 5 "$MR/printer/objects/query?mcu%20ifs=mcu_version" 2>/dev/null | grep -c mcu_version)
 
 pids_of() {
     for d in /proc/[0-9]*; do
@@ -129,9 +133,9 @@ resume
 KLIPPY= WAKE=
 for i in $(seq 1 45); do
     sleep 2
-    curl -s -m 5 "$MR/printer/info" | grep -q '"state": *"ready"' && break
+    "$CURL" -s -m 5 "$MR/printer/info" | grep -q '"state": *"ready"' && break
 done
-curl -s -m 5 "$MR/printer/objects/query?mcu=mcu_version&mcu%20eboard=mcu_version&mcu%20ifs=mcu_version" |
+"$CURL" -s -m 5 "$MR/printer/objects/query?mcu=mcu_version&mcu%20eboard=mcu_version&mcu%20ifs=mcu_version" |
     grep -o '"mcu[^"]*": *{"mcu_version": *"[^"]*"' | sed 's/{"mcu_version": *//; s/"//g' |
     while IFS= read -r line; do say "$line"; done
 [ -z "$failed" ] || die "some boards failed; see $LOG"

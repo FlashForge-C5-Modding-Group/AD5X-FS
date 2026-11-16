@@ -518,7 +518,9 @@ class SocUpdater(Updater):
             running = [(st.get(m) or {}).get("mcu_version") or "" for m in ("mcu", "mcu eboard", "mcu ifs")]
         except Exception:
             running = []
-        if running and all(version in v for v in running):
+        if len(running) != 3 or not all(running):
+            return                              # Klippy not ready: never flash without knowing what the boards run
+        if all(version in v for v in running):
             write_atomic(flashed, (version + "\n").encode())
             self.log("MCU firmware: boards already run %s" % version)
             return

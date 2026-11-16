@@ -19,6 +19,8 @@ until curl -fs http://127.0.0.1:7125/server/info >/dev/null 2>&1; do
     sleep 5
 done
 
-curl -fs "$API?namespace=fluidd&key=macros" >/dev/null 2>&1 && exit 0
+# a saved layout is kept; Fluidd also saves an empty one ("value":{}) on its own
+saved=$(curl -fs "$API?namespace=fluidd&key=macros" 2>/dev/null) &&
+    ! printf '%s' "$saved" | grep -q '"value": *{}' && exit 0
 { printf '{"namespace":"fluidd","key":"macros","value":'; cat "$MACROS"; printf '}'; } |
     curl -fs -X POST -H 'Content-Type: application/json' -d @- "$API" >/dev/null
