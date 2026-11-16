@@ -29,17 +29,31 @@ export LVGL_EVDEV_DEV=${TOUCH:-/dev/input/event1}
 # right way up on the AD5X (rotation 0)
 export DISPLAY_ROTATE=0
 
-# The config folder's copy wins, so it can be edited from Fluidd or Mainsail.
+# Full config from AD5X-FS (kept current by the updater), plus grumpyscreen.ini in the
+# config folder for your own changes (editable from Fluidd or Mainsail)
 CONFIG_DIR=/usr/data/openad5x/klipper/config
-CONFIG=$CONFIG_DIR/grumpyscreen.cfg
+BASE=/usr/data/openad5x/grumpyscreen/grumpyscreen.cfg
+OVERRIDE=$CONFIG_DIR/grumpyscreen.ini
+[ -f "$BASE" ] && export CONFIG_FILE="$BASE"
 if [ -d "$CONFIG_DIR" ]; then
-    [ -f "$CONFIG" ] || cp "${GRUMPY}.cfg" "$CONFIG" 2>/dev/null
-    if [ -f "$CONFIG" ]; then
-        export CONFIG_FILE="$CONFIG"
-        # AFC in the config: MMU panel on, unless another backend was chosen
-        if grep -q '^\[include AFC/' "$CONFIG_DIR/printer.cfg" 2>/dev/null && grep -q '^backend: none' "$CONFIG"; then
-            sed -i '/^\[mmu\]/,/^\[/ s/^backend: none/backend: afc/' "$CONFIG"
-        fi
+    [ -f "$OVERRIDE" ] || printf '[ui]\n' > "$OVERRIDE"
+    export CONFIG_OVERRIDE_FILE="$OVERRIDE"
+    # set at every boot: Spoolman button only with [spoolman] in moonraker.conf, MMU panel only with AFC
+    set_ui() {
+        grep -q '^\[ui\]' "$OVERRIDE" || printf '\n[ui]\n' >> "$OVERRIDE"
+        grep -q "^$1: $2\$" "$OVERRIDE" && return
+        sed -i "/^$1:/d" "$OVERRIDE"
+        sed -i "/^\[ui\]/a $1: $2" "$OVERRIDE"
+    }
+    if grep -q '^\[spoolman\]' "$CONFIG_DIR/moonraker.conf" 2>/dev/null; then
+        set_ui hide_spoolman false
+    else
+        set_ui hide_spoolman true
+    fi
+    if grep -q '^\[include AFC/' "$CONFIG_DIR/printer.cfg" 2>/dev/null; then
+        set_ui hide_mmu false
+    else
+        set_ui hide_mmu true
     fi
 fi
 
