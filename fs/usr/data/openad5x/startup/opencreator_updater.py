@@ -2,7 +2,6 @@
 # OpenCreator updater: merges config template updates into the live Klipper
 # config, keeping the user's own edits and the printer's SAVE_CONFIG
 # calibration. Run on the printer by 99-opencreator-updater.sh ("soc").
-# How it works: config-docs/UPDATER.md in opencreator-fs.
 #
 # Copyright (c) 2026 FlashForge Creator 5 Modding Group
 # From https://github.com/FlashForge-C5-Modding-Group/opencreator-fs (commit f6fdd22)
@@ -38,8 +37,7 @@ SOC_CLONE = OCDIR / "ad5x-fs"
 SOC_KLIPPER = OCDIR / "klipper" / "klipper"
 FS_GIT_URL = "https://github.com/FlashForge-C5-Modding-Group/AD5X-FS.git"
 LOOPSCRIPT_PARTS = ("startup", "firmware", "moonraker", "fluidd", "plugin-manager", "mcu-flash",
-                    "loadcell", "nginx")
-NGINX_CONF_D = Path("/usr/data/nginx/conf.d")
+                    "loadcell", "nginx", "grumpyscreen")
 FIRMWARE_EXE = Path("/usr/prog/PROGRAM/software/firmwareExe")
 SOC_LOG = Path("/tmp/openad5x-updater.log")
 
@@ -313,12 +311,24 @@ def overlay_dir(src: Path, dest: Path, manifest: Path):
     """Copy SRC's files over DEST (files only DEST has stay), and write the new
     manifest beside the old one; a file the old manifest lists that SRC no
     longer has is removed from DEST if unchanged. The installer's oc_overlay
-    writes the same "md5  path" manifest."""
-    lines = []
+    writes the same "md5  path" manifest. A file changed on the printer since
+    it was installed is kept; the kept paths are returned."""
+    installed = {}
+    if manifest.is_file():
+        for line in manifest.read_text().splitlines():
+            if "  " in line:
+                sum_, rel = line.split("  ", 1)
+                installed[rel] = sum_
+    lines, kept = [], []
     for f in sorted(p for p in src.rglob("*") if p.is_file()):
         rel = f.relative_to(src).as_posix()
-        (dest / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(f), str(dest / rel))
+        target = dest / rel
+        if rel in installed and target.is_file() and md5(target) != installed[rel]:
+            kept.append(rel)
+            lines.append("%s  %s" % (installed[rel], rel))
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(f), str(target))
         lines.append("%s  %s" % (md5(f), rel))
     if manifest.is_file():
         for line in manifest.read_text().splitlines():
@@ -331,6 +341,7 @@ def overlay_dir(src: Path, dest: Path, manifest: Path):
                 (dest / rel).unlink()
     manifest.parent.mkdir(parents=True, exist_ok=True)
     Path(str(manifest) + ".new").write_text("".join(l + "\n" for l in lines))
+    return kept
 
 
 def part_current(src: Path, dest: Path) -> bool:
@@ -350,7 +361,6 @@ class SocUpdater(Updater):
         super().__init__(config_dir, clone, "fs/usr/data/config", log_path=log_path, **kw)
         self.ocdir = Path(ocdir)
         self.loopscript_applied = self.ocdir / ".loopscript-commit"
-        self.nginx = NGINX_CONF_D
         self.firmware_exe = FIRMWARE_EXE
 
     def ensure_clone(self) -> bool:
@@ -386,7 +396,8 @@ class SocUpdater(Updater):
             try:
                 if dest.is_dir():
                     shutil.copytree(str(dest), str(new), symlinks=True)
-                overlay_dir(src, new, manifest)
+                for rel in overlay_dir(src, new, manifest):
+                    self.log("%s/%s: changed on the printer, kept" % (part, rel))
             except OSError as e:
                 self.log("%s: copy failed: %s" % (part, e))
                 shutil.rmtree(new, ignore_errors=True)
@@ -414,14 +425,6 @@ class SocUpdater(Updater):
         if version.is_file() and (not (self.ocdir / "version.txt").is_file()
                                   or (self.ocdir / "version.txt").read_bytes() != version.read_bytes()):
             shutil.copy2(str(version), str(self.ocdir / "version.txt"))
-        for conf in sorted((src_root / "nginx" / "conf.d").glob("*.conf")):
-            dest = self.nginx / conf.name
-            if dest.is_file() and dest.read_bytes() == conf.read_bytes():
-                continue
-            self.nginx.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(str(conf), str(dest))
-            self.log("nginx %s: updated" % conf.name)
-            changed = True
         # Only while the LoopScript launcher (a shell script, not FlashForge's
         # ELF) is in place, so a rollback to stock is never undone.
         launcher = self.ocdir / "firmware" / "firmwareExe"
@@ -495,6 +498,55 @@ class SocUpdater(Updater):
             self.restart_klipper(conflicts)
         return not conflicts
 
+    # stock flashes the boards once when an update brings new MCU firmware (the control package's
+    # Update/UpdateM flags, run.sh at the next boot); here a new mcu-firmware/ad5x/VERSION does it
+    def sync_mcu(self):
+        folder = self.repo / "mcu-firmware" / "ad5x"
+        version = self._read(folder / "VERSION")
+        flashed, failed = self.state / "mcu-flashed", self.state / "mcu-failed"
+        if not version or self._read(flashed) == version or self.printing():
+            return
+        try:
+            head = self.head()
+        except UpdateError:
+            return
+        if self._read(failed) == "%s %s" % (version, head):
+            return                              # tried at this commit; again after the next update
+        try:
+            st = self.api("/printer/objects/query?mcu=mcu_version&mcu%20eboard=mcu_version"
+                          "&mcu%20ifs=mcu_version", timeout=5)["result"]["status"]
+            running = [(st.get(m) or {}).get("mcu_version") or "" for m in ("mcu", "mcu eboard", "mcu ifs")]
+        except Exception:
+            running = []
+        if running and all(version in v for v in running):
+            write_atomic(flashed, (version + "\n").encode())
+            self.log("MCU firmware: boards already run %s" % version)
+            return
+        flasher = self.ocdir / "mcu-flash" / "ad5x-mcu-flash"
+        if not flasher.is_file():
+            self.log("MCU firmware: %s is missing; not flashing" % flasher)
+            return
+        self.log("MCU firmware: flashing %s" % version)
+        try:
+            r = subprocess.run(["sh", str(flasher), str(folder)], stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, timeout=900)
+            output, code = r.stdout.decode("utf-8", "replace"), r.returncode
+        except subprocess.TimeoutExpired:
+            output, code = "timed out", -1
+        for line in output.strip().splitlines()[-15:]:
+            self.log("MCU firmware: %s" % line)
+        if code == 0:
+            write_atomic(flashed, (version + "\n").encode())
+            failed.unlink(missing_ok=True)
+            self.log("MCU firmware: %s flashed (the eboard takes it at the next power cycle)" % version)
+            return
+        write_atomic(failed, ("%s %s\n" % (version, head)).encode())
+        try:
+            self.api("/printer/gcode/script", "POST", {"script": 'RESPOND TYPE=error MSG="OpenAD5X: '
+                     'MCU firmware %s failed to flash; see %s"' % (version, self.log_path or "the updater log")})
+        except Exception:
+            pass
+
     def watch(self):
         self.log("watching %s (checks every 60 s)" % self.repo)
         for _ in range(120):                    # Moonraker up, so a restart can reach it
@@ -508,6 +560,10 @@ class SocUpdater(Updater):
                 self.apply()
             except Exception as e:              # keep watching whatever happens
                 self.log("update failed: %s" % e)
+            try:
+                self.sync_mcu()
+            except Exception as e:
+                self.log("MCU firmware update failed: %s" % e)
             time.sleep(60)
 
 
