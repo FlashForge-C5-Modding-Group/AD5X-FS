@@ -94,6 +94,14 @@
       "visible": true,
       "disabledWhilePrinting": true,
       "color": "",
+      "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0002",
+      "name": "ADX_QUICK_START"
+    },
+    {
+      "alias": "",
+      "visible": true,
+      "disabledWhilePrinting": true,
+      "color": "",
       "categoryId": "6f1c2a10-0b3e-4c55-9a41-1d7e0c9a0003",
       "name": "LOAD_CELL_TARE"
     },
