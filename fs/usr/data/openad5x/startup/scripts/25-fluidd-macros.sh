@@ -6,6 +6,8 @@
 # This file may be distributed under the terms of the MIT license.
 API=http://127.0.0.1:7125/server/database/item
 MACROS=/usr/data/openad5x/fluidd/macros.json
+# Entware curl: FlashForge's curl comes first in the boot PATH and needs its own LD_LIBRARY_PATH
+CURL=/opt/bin/curl
 export PATH=$PATH:/opt/bin
 # FlashForge's startup passes on its LD_LIBRARY_PATH, whose old libcurl
 # breaks curl (undefined symbol curl_mime_free); nothing here needs it.
@@ -13,14 +15,14 @@ unset LD_LIBRARY_PATH
 [ -f "$MACROS" ] || exit 0
 
 i=0
-until curl -fs http://127.0.0.1:7125/server/info >/dev/null 2>&1; do
+until "$CURL" -fs http://127.0.0.1:7125/server/info >/dev/null 2>&1; do
     i=$((i + 1))
     [ $i -ge 120 ] && exit 0
     sleep 5
 done
 
 # a saved layout is kept; Fluidd also saves an empty one ("value":{}) on its own
-saved=$(curl -fs "$API?namespace=fluidd&key=macros" 2>/dev/null) &&
+saved=$("$CURL" -fs "$API?namespace=fluidd&key=macros" 2>/dev/null) &&
     ! printf '%s' "$saved" | grep -q '"value": *{}' && exit 0
 { printf '{"namespace":"fluidd","key":"macros","value":'; cat "$MACROS"; printf '}'; } |
-    curl -fs -X POST -H 'Content-Type: application/json' -d @- "$API" >/dev/null
+    "$CURL" -fs -X POST -H 'Content-Type: application/json' -d @- "$API" >/dev/null
